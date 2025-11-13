@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Song Request Queue</title>
+    <style>
+        :root {
+            --themeColor: #667eea;
+            --backgroundColor: #ffffff;
+            --textColor: #000000;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--themeColor) 0%, var(--themeColor) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--textColor);
+        }
+
+        .Container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--backgroundColor);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .Header {
+            background: linear-gradient(135deg, var(--themeColor) 0%, var(--themeColor) 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .Header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .Header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .Controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .Status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .StatusDot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .ButtonGroup {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .NextSongButton {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 12px 100px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        .NextSongButton:hover {
+            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        .NextSongButton:active {
+            transform: translateY(0);
+        }
+
+        .NextSongButton:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .ClearButton {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .ClearButton:hover {
+            background: #ff3838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+        }
+
+        .ClearButton:active {
+            transform: translateY(0);
+        }
+
+        .QueueContainer {
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+        }
+
+        .QueueContainer::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .QueueContainer::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .QueueContainer::-webkit-scrollbar-thumb {
+            background: var(--themeColor);
+            border-radius: 10px;
+        }
+
+        .QueueContainer::-webkit-scrollbar-thumb:hover {
+            opacity: 0.8;
+        }
+
+        .QueueItem {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+            color: var(--textColor);
+            font-size: 1em;
+            line-height: 1.6;
+            gap: 10px;
+        }
+
+        .QueueItem:last-child {
+            border-bottom: none;
+        }
+
+        .QueueItemText {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+        }
+
+        .QueueItemButtons {
+            display: flex;
+            gap: 5px;
+        }
+
+        .QueueButton {
+            background: var(--themeColor);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            min-width: 35px;
+        }
+
+        .QueueButton:hover {
+            opacity: 0.8;
+            transform: translateY(-1px);
+        }
+
+        .QueueButton:active {
+            transform: translateY(0);
+        }
+
+        .QueueButton:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .QueueButtonUp {
+            background: #4caf50;
+        }
+
+        .QueueButtonUp:hover {
+            background: #45a049;
+        }
+
+        .QueueButtonDown {
+            background: #2196F3;
+        }
+
+        .QueueButtonDown:hover {
+            background: #1976D2;
+        }
+
+        .QueueButtonRemove {
+            background: #f44336;
+        }
+
+        .QueueButtonRemove:hover {
+            background: #d32f2f;
+        }
+
+        .EmptyState {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .EmptyState h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .EmptyState p {
+            font-size: 1em;
+        }
+
+        .SettingsButton {
+            background: var(--themeColor);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .SettingsButton:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .SettingsButton:active {
+            transform: translateY(0);
+        }
+
+        .Modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ModalContent {
+            background: var(--backgroundColor);
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .ModalHeader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .ModalHeader h2 {
+            color: var(--textColor);
+            font-size: 1.8em;
+        }
+
+        .CloseButton {
+            background: none;
+            border: none;
+            font-size: 2em;
+            cursor: pointer;
+            color: var(--textColor);
+            line-height: 1;
+        }
+
+        .CloseButton:hover {
+            opacity: 0.7;
+        }
+
+        .FormGroup {
+            margin-bottom: 20px;
+        }
+
+        .FormGroup label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--textColor);
+            font-weight: 600;
+        }
+
+        .FormGroup input[type="color"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            color: var(--textColor);
+            background: var(--backgroundColor);
+            height: 50px;
+        }
+
+        .FormGroup input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            color: var(--textColor);
+            background: var(--backgroundColor);
+        }
+
+        .FormGroup input:focus {
+            outline: none;
+            border-color: var(--themeColor);
+        }
+
+        .ModalButtons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+
+        .SaveButton {
+            background: var(--themeColor);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .SaveButton:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .RestoreButton {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .RestoreButton:hover {
+            background: #f57c00;
+            transform: translateY(-2px);
+        }
+
+        .CancelButton {
+            background: #cccccc;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .CancelButton:hover {
+            background: #aaaaaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="Container">
+        <div class="Header">
+            <h1>🎵 Song Request Queue</h1>
+            <p>Live requests from Rumble chat</p>
+        </div>
+        
+        <div class="Controls">
+            <div class="Status">
+                <div class="StatusDot"></div>
+                <span>Listening for requests...</span>
+            </div>
+            <div class="ButtonGroup">
+                <button class="NextSongButton" onclick="NextSong()" id="NextSongButton">Next Song</button>
+                <button class="ClearButton" onclick="ClearQueue()">Clear Queue</button>
+                <button class="SettingsButton" onclick="OpenSettings()" title="Settings">
+                    <span>⚙️</span>
+                    <span>Settings</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="Modal" id="SettingsModal">
+            <div class="ModalContent">
+                <div class="ModalHeader">
+                    <h2>Settings</h2>
+                    <button class="CloseButton" onclick="CloseSettings()">&times;</button>
+                </div>
+                <div class="FormGroup">
+                    <label for="ThemeColorInput">Theme Color</label>
+                    <input type="color" id="ThemeColorInput" value="#667eea">
+                </div>
+                <div class="FormGroup">
+                    <label for="BackgroundColorInput">Background Color</label>
+                    <input type="color" id="BackgroundColorInput" value="#ffffff">
+                </div>
+                <div class="FormGroup">
+                    <label for="TextColorInput">Text Color</label>
+                    <input type="color" id="TextColorInput" value="#000000">
+                </div>
+                <div class="FormGroup">
+                    <label for="ApiUrlInput">Stream API URL</label>
+                    <input type="text" id="ApiUrlInput" placeholder="Enter Rumble API URL">
+                </div>
+                <div class="ModalButtons">
+                    <button class="RestoreButton" onclick="RestoreDefaults()">Restore Defaults</button>
+                    <button class="CancelButton" onclick="CloseSettings()">Cancel</button>
+                    <button class="SaveButton" onclick="SaveSettings()">Save</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="QueueContainer" id="QueueContainer">
+            <div class="EmptyState">
+                <h2>No requests yet</h2>
+                <p>Waiting for song requests in chat...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const QueueContainer = document.getElementById('QueueContainer');
+        let CurrentQueue = [];
+
+        async function FetchQueue() {
+            try {
+                const response = await fetch('/api/queue');
+                const queue = await response.json();
+                
+                if (queue.length !== CurrentQueue.length || 
+                    JSON.stringify(queue) !== JSON.stringify(CurrentQueue)) {
+                    CurrentQueue = queue;
+                    UpdateDisplay();
+                }
+            } catch (error) {
+                console.error('Error fetching queue:', error);
+            }
+        }
+
+        function UpdateDisplay() {
+            const NextSongButton = document.getElementById('NextSongButton');
+            
+            if (CurrentQueue.length === 0) {
+                QueueContainer.innerHTML = `
+                    <div class="EmptyState">
+                        <h2>No requests yet</h2>
+                        <p>Waiting for song requests in chat...</p>
+                    </div>
+                `;
+                if (NextSongButton) {
+                    NextSongButton.disabled = true;
+                }
+                return;
+            }
+
+            if (NextSongButton) {
+                NextSongButton.disabled = false;
+            }
+
+            QueueContainer.innerHTML = CurrentQueue.map((item, index) => {
+                const isFirst = index === 0;
+                const isLast = index === CurrentQueue.length - 1;
+                
+                return `
+                    <div class="QueueItem">
+                        <div class="QueueItemText">${escapeHtml(item)}</div>
+                        <div class="QueueItemButtons">
+                            <button class="QueueButton QueueButtonUp" 
+                                    onclick="MoveItem(${index}, 'up')" 
+                                    ${isFirst ? 'disabled' : ''}>↑</button>
+                            <button class="QueueButton QueueButtonDown" 
+                                    onclick="MoveItem(${index}, 'down')" 
+                                    ${isLast ? 'disabled' : ''}>↓</button>
+                            <button class="QueueButton QueueButtonRemove" 
+                                    onclick="RemoveItem(${index})">×</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function NextSong() {
+            try {
+                const response = await fetch('/api/next', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success' || data.status === 'empty') {
+                    await FetchQueue();
+                } else {
+                    console.error('Error getting next song:', data);
+                }
+            } catch (error) {
+                console.error('Error getting next song:', error);
+            }
+        }
+
+        async function MoveItem(index, direction) {
+            try {
+                const response = await fetch('/api/move', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        index: index,
+                        direction: direction
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    await FetchQueue();
+                } else {
+                    console.error('Error moving item:', data);
+                }
+            } catch (error) {
+                console.error('Error moving item:', error);
+            }
+        }
+
+        async function RemoveItem(index) {
+            try {
+                const response = await fetch('/api/remove', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        index: index
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    await FetchQueue();
+                } else {
+                    console.error('Error removing item:', data);
+                }
+            } catch (error) {
+                console.error('Error removing item:', error);
+            }
+        }
+
+        async function ClearQueue() {
+            if (!confirm('Are you sure you want to clear the entire queue?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/clear', {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    CurrentQueue = [];
+                    UpdateDisplay();
+                }
+            } catch (error) {
+                console.error('Error clearing queue:', error);
+                alert('Failed to clear queue');
+            }
+        }
+
+        async function LoadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                
+                if (config.themeColor && config.backgroundColor && config.textColor) {
+                    document.documentElement.style.setProperty('--themeColor', config.themeColor);
+                    document.documentElement.style.setProperty('--backgroundColor', config.backgroundColor);
+                    document.documentElement.style.setProperty('--textColor', config.textColor);
+                    
+                    document.getElementById('ThemeColorInput').value = config.themeColor;
+                    document.getElementById('BackgroundColorInput').value = config.backgroundColor;
+                    document.getElementById('TextColorInput').value = config.textColor;
+                }
+                
+                if (config.apiUrl) {
+                    document.getElementById('ApiUrlInput').value = config.apiUrl;
+                }
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+        }
+
+        function OpenSettings() {
+            document.getElementById('SettingsModal').style.display = 'flex';
+        }
+
+        function CloseSettings() {
+            document.getElementById('SettingsModal').style.display = 'none';
+        }
+
+        async function SaveSettings() {
+            try {
+                const themeColor = document.getElementById('ThemeColorInput').value;
+                const backgroundColor = document.getElementById('BackgroundColorInput').value;
+                const textColor = document.getElementById('TextColorInput').value;
+                const apiUrl = document.getElementById('ApiUrlInput').value;
+                
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        themeColor: themeColor,
+                        backgroundColor: backgroundColor,
+                        textColor: textColor,
+                        apiUrl: apiUrl
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    document.documentElement.style.setProperty('--themeColor', themeColor);
+                    document.documentElement.style.setProperty('--backgroundColor', backgroundColor);
+                    document.documentElement.style.setProperty('--textColor', textColor);
+                    CloseSettings();
+                    alert('Settings saved! Note: API URL changes require restarting the application to take effect.');
+                } else {
+                    alert('Failed to save settings: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                alert('Failed to save settings');
+            }
+        }
+
+        async function RestoreDefaults() {
+            const defaultThemeColor = '#667eea';
+            const defaultBackgroundColor = '#ffffff';
+            const defaultTextColor = '#000000';
+            const defaultApiUrl = 'https://rumble.com/-livestream-api/get-data?key=0uSPgyv65njK1n38mMiZuNFVdX6wlQ6XBVaNpD6AcdKGQJgoKTo8bT2_byDUp5M_ByIJ16vUMsiavq1XCBq4Pw';
+            
+            document.getElementById('ThemeColorInput').value = defaultThemeColor;
+            document.getElementById('BackgroundColorInput').value = defaultBackgroundColor;
+            document.getElementById('TextColorInput').value = defaultTextColor;
+            document.getElementById('ApiUrlInput').value = defaultApiUrl;
+            
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        themeColor: defaultThemeColor,
+                        backgroundColor: defaultBackgroundColor,
+                        textColor: defaultTextColor,
+                        apiUrl: defaultApiUrl
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    document.documentElement.style.setProperty('--themeColor', defaultThemeColor);
+                    document.documentElement.style.setProperty('--backgroundColor', defaultBackgroundColor);
+                    document.documentElement.style.setProperty('--textColor', defaultTextColor);
+                    alert('Defaults restored! Note: API URL changes require restarting the application to take effect.');
+                } else {
+                    alert('Failed to restore defaults: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error restoring defaults:', error);
+                alert('Failed to restore defaults');
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('SettingsModal');
+            if (event.target === modal) {
+                CloseSettings();
+            }
+        }
+
+        LoadConfig();
+        FetchQueue();
+        setInterval(FetchQueue, 2000);
+    </script>
+</body>
+</html>
+
